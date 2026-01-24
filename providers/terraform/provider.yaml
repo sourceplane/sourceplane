@@ -1,0 +1,142 @@
+name: terraform
+version: 0.1.0
+apiVersion: sourceplane.io/v1
+kind: Provider
+
+description: |
+  Terraform provider for infrastructure as code components.
+  Supports various infrastructure resource types including databases, clusters, networks, and storage.
+
+kinds:
+  - name: database
+    fullType: terraform.database
+    description: Managed database instances (RDS, CloudSQL, Azure Database, etc.)
+    
+  - name: cluster
+    fullType: terraform.cluster
+    description: Container orchestration clusters (EKS, GKE, AKS, etc.)
+    
+  - name: network
+    fullType: terraform.network
+    description: Network infrastructure (VPC, VNet, subnets, etc.)
+    
+  - name: storage
+    fullType: terraform.storage
+    description: Object storage buckets (S3, GCS, Azure Blob, etc.)
+    
+  - name: compute
+    fullType: terraform.compute
+    description: Virtual machines and compute instances
+
+configuration:
+  backend:
+    description: Terraform backend configuration
+    required: false
+    
+  provider_config:
+    description: Cloud provider-specific configuration
+    required: false
+    
+  workspace:
+    description: Terraform workspace name
+    required: false
+    default: "default"
+
+supported_platforms:
+  - AWS
+  - Azure
+  - GCP
+  - DigitalOcean
+  - Kubernetes
+
+examples:
+  - name: RDS Database
+    kind: database
+    description: AWS RDS PostgreSQL instance
+    
+  - name: EKS Cluster
+    kind: cluster
+    description: Amazon EKS cluster
+    
+  - name: VPC Network
+    kind: network
+    description: AWS VPC with subnets
+
+# Thin-CI Configuration
+# Defines how this provider participates in CI planning
+thinCI:
+  # Supported CI actions
+  actions:
+    - name: validate
+      description: Validate Terraform configuration syntax
+      order: 1
+      preSteps:
+        - name: terraform-fmt-check
+          command: terraform fmt -check
+      postSteps: []
+      inputs:
+        path: "."
+      outputs:
+        - validationReport
+        
+    - name: plan
+      description: Generate Terraform execution plan
+      order: 2
+      preSteps:
+        - name: terraform-init
+          command: terraform init
+      postSteps:
+        - name: save-plan
+          command: terraform show -json plan.tfplan > plan.json
+      inputs:
+        path: "."
+        backend: ""
+        workspace: "default"
+        varFile: ""
+      outputs:
+        - plan.tfplan
+        - plan.json
+        - planSummary
+        
+    - name: apply
+      description: Apply Terraform changes to infrastructure
+      order: 3
+      preSteps:
+        - name: verify-plan
+          command: echo "Verifying plan before apply"
+      postSteps:
+        - name: output-state
+          command: terraform output -json > outputs.json
+      inputs:
+        path: "."
+        planFile: "plan.tfplan"
+        autoApprove: true
+      outputs:
+        - terraform.tfstate
+        - outputs.json
+        
+    - name: destroy
+      description: Destroy Terraform-managed infrastructure
+      order: 4
+      preSteps:
+        - name: confirm-destroy
+          command: echo "Preparing to destroy infrastructure"
+      postSteps:
+        - name: cleanup-state
+          command: echo "Cleaning up state files"
+      inputs:
+        path: "."
+        autoApprove: false
+      outputs: []
+  
+  # Default values merged into every job
+  defaults:
+    timeout: 1800
+    terraformVersion: "1.5.0"
+    parallelism: 10
+    
+  # Default action ordering for multi-action jobs
+  ordering:
+    - validate
+    - plan
+    - apply

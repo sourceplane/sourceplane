@@ -1,0 +1,145 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: Terraform Component Schema
+description: JSON Schema for Terraform provider components
+
+type: object
+required:
+  - module
+
+properties:
+  module:
+    type: object
+    description: Terraform module configuration
+    required:
+      - source
+    properties:
+      source:
+        type: string
+        description: Module source path (local or remote)
+        examples:
+          - "./infra/database"
+          - "terraform-aws-modules/rds/aws"
+          - "git::https://github.com/org/repo.git//modules/database"
+      
+      version:
+        type: string
+        description: Module version (for registry modules)
+        pattern: "^\\d+\\.\\d+\\.\\d+$"
+        examples:
+          - "5.1.0"
+          - "1.0.0"
+  
+  variables:
+    type: object
+    description: Input variables for the Terraform module
+    additionalProperties: true
+    examples:
+      - instance_type: "db.t3.micro"
+        engine: "postgres"
+        engine_version: "14.5"
+  
+  backend:
+    type: object
+    description: Terraform backend configuration
+    properties:
+      type:
+        type: string
+        enum: ["s3", "gcs", "azurerm", "remote", "local"]
+        description: Backend type
+      
+      config:
+        type: object
+        description: Backend-specific configuration
+        additionalProperties: true
+  
+  workspace:
+    type: string
+    description: Terraform workspace to use
+    default: "default"
+    examples:
+      - "production"
+      - "staging"
+      - "dev"
+  
+  provider_config:
+    type: object
+    description: Cloud provider configuration
+    properties:
+      aws:
+        type: object
+        properties:
+          region:
+            type: string
+            description: AWS region
+            examples: ["us-east-1", "eu-west-1"]
+          profile:
+            type: string
+            description: AWS profile name
+      
+      gcp:
+        type: object
+        properties:
+          project:
+            type: string
+            description: GCP project ID
+          region:
+            type: string
+            description: GCP region
+      
+      azure:
+        type: object
+        properties:
+          subscription_id:
+            type: string
+            description: Azure subscription ID
+          location:
+            type: string
+            description: Azure location
+  
+  outputs:
+    type: array
+    description: Expected Terraform outputs
+    items:
+      type: string
+    examples:
+      - ["endpoint", "port", "connection_string"]
+
+examples:
+  - description: "AWS RDS Database"
+    value:
+      module:
+        source: "terraform-aws-modules/rds/aws"
+        version: "5.1.0"
+      variables:
+        identifier: "my-database"
+        engine: "postgres"
+        engine_version: "14.5"
+        instance_class: "db.t3.micro"
+        allocated_storage: 20
+      backend:
+        type: "s3"
+        config:
+          bucket: "my-terraform-state"
+          key: "database/terraform.tfstate"
+          region: "us-east-1"
+  
+  - description: "EKS Cluster"
+    value:
+      module:
+        source: "terraform-aws-modules/eks/aws"
+        version: "19.0.0"
+      variables:
+        cluster_name: "my-cluster"
+        cluster_version: "1.27"
+        vpc_id: "vpc-xxx"
+        subnet_ids: ["subnet-xxx", "subnet-yyy"]
+      workspace: "production"
+  
+  - description: "Local Terraform Module"
+    value:
+      module:
+        source: "./infra/database"
+      variables:
+        name: "payments-db"
+        size: "small"
+        backup_enabled: true

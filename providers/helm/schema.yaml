@@ -1,0 +1,222 @@
+# Schema for helm.service component type
+
+$schema: http://json-schema.org/draft-07/schema#
+$id: https://schemas.sourceplane.io/providers/helm/v1/service.json
+
+title: Helm Service
+description: A Helm chart deployment representing a Kubernetes service
+
+type: object
+
+required:
+  - chart
+
+properties:
+  # Chart Definition (required)
+  chart:
+    description: Helm chart specification
+    type: object
+    oneOf:
+      # Remote chart from repository
+      - required: [repo, name]
+        properties:
+          repo:
+            type: string
+            description: Helm repository URL
+            examples:
+              - https://charts.bitnami.com/bitnami
+              - https://charts.mycompany.com
+          name:
+            type: string
+            description: Chart name in the repository
+            examples:
+              - nginx
+              - postgresql
+          version:
+            type: string
+            description: Chart version (semver)
+            examples:
+              - "1.2.3"
+              - ">=2.0.0"
+            
+      # Local chart path
+      - required: [path]
+        properties:
+          path:
+            type: string
+            description: Relative or absolute path to chart directory
+            examples:
+              - ./charts/my-service
+              - charts/backend-api
+
+  # Release Configuration
+  release:
+    description: Helm release configuration
+    type: object
+    properties:
+      name:
+        type: string
+        description: Helm release name (defaults to component name)
+      namespace:
+        type: string
+        description: Kubernetes namespace
+        default: default
+      createNamespace:
+        type: boolean
+        description: Create namespace if it doesn't exist
+        default: false
+
+  # Helm Values (free-form)
+  values:
+    description: Values to override in the chart
+    type: object
+    additionalProperties: true
+    examples:
+      - image:
+          repository: myorg/myapp
+          tag: "1.0.0"
+        replicas: 3
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+
+  # Lifecycle Controls
+  lifecycle:
+    description: Lifecycle behavior controls
+    type: object
+    properties:
+      atomic:
+        type: boolean
+        description: If true, rollback on failure
+        default: true
+      wait:
+        type: boolean
+        description: Wait for resources to be ready
+        default: true
+      timeout:
+        type: string
+        description: Timeout for operations
+        default: "10m"
+        pattern: "^[0-9]+(s|m|h)$"
+      cleanupOnFail:
+        type: boolean
+        description: Delete resources on failed install
+        default: true
+      force:
+        type: boolean
+        description: Force resource updates through delete/recreate
+        default: false
+      recreatePods:
+        type: boolean
+        description: Restart pods for resource types that support it
+        default: false
+
+  # CI/CD Hooks
+  hooks:
+    description: Custom hooks for CI/CD integration
+    type: object
+    properties:
+      preDeploy:
+        type: array
+        description: Commands to run before deployment
+        items:
+          type: string
+      postDeploy:
+        type: array
+        description: Commands to run after deployment
+        items:
+          type: string
+      lint:
+        type: boolean
+        description: Enable linting before deployment
+        default: true
+
+  # Dependencies (other components this depends on)
+  dependsOn:
+    description: Component dependencies
+    type: array
+    items:
+      type: string
+    examples:
+      - - database
+        - redis-cache
+
+# Conventions and Inferred Fields
+# 
+# The following fields are inferred if not specified:
+# 
+# - release.name: defaults to component name
+# - release.namespace: defaults to provider-level default (usually "default")
+# - values.image.tag: can be inferred from CI context (git SHA, version tag)
+# - values.replicas: defaults to provider-level default (usually 2)
+# 
+# Convention-based behaviors:
+# 
+# - If chart.path is specified, Sourceplane looks relative to intent.yaml
+# - If chart.repo is specified, Sourceplane caches it locally
+# - Release names are kebab-cased from component names
+# - Namespaces follow environment naming conventions if not explicit
+
+# Provider-level defaults merge order:
+# 1. Provider defaults (in providers.helm.defaults)
+# 2. Component spec (this file)
+# 3. Environment/runtime overrides (from CLI or CI)
+#
+# Override rules:
+# - Scalar values are replaced
+# - Objects/maps are deep-merged
+# - Arrays are replaced (not merged)
+
+# Examples of short intent declarations using defaults:
+
+# Minimal (using all defaults):
+# components:
+#   - name: api
+#     type: helm.service
+#     spec:
+#       chart:
+#         path: ./charts/api
+
+# With custom values:
+# components:
+#   - name: api
+#     type: helm.service
+#     spec:
+#       chart:
+#         repo: https://charts.mycompany.com
+#         name: backend-api
+#         version: "2.1.0"
+#       values:
+#         replicas: 5
+#         image:
+#           tag: "v2.3.1"
+
+# Full control:
+# components:
+#   - name: api
+#     type: helm.service
+#     spec:
+#       chart:
+#         path: ./charts/api
+#       release:
+#         namespace: production
+#         createNamespace: true
+#       values:
+#         image:
+#           repository: myorg/api
+#           tag: "1.0.0"
+#         replicas: 3
+#         resources:
+#           limits:
+#             cpu: "2"
+#             memory: "2Gi"
+#       lifecycle:
+#         atomic: true
+#         wait: true
+#         timeout: "15m"
+#       hooks:
+#         preDeploy:
+#           - kubectl apply -f migrations/
+#         postDeploy:
+#           - ./scripts/smoke-test.sh

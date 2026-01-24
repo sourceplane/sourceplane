@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: Intent
+metadata:
+  name: microservices-app
+  description: Microservices application with service dependencies
+
+providers:
+  helm:
+    version: "0.1.0"
+    defaults:
+      namespace: production
+      createNamespace: true
+
+components:
+  # Layer 1: Data Layer - PostgreSQL Database
+  - name: postgres-db
+    type: helm.service
+    spec:
+      chart:
+        repository: https://charts.bitnami.com/bitnami
+        name: postgresql
+        version: "12.5.8"
+      releaseName: app-postgres
+      namespace: data
+      values:
+        auth:
+          database: appdb
+          username: appuser
+        primary:
+          persistence:
+            enabled: true
+            size: 20Gi
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+  # Layer 2: Backend Services (depend on database)
+  - name: user-service
+    type: helm.service
+    spec:
+      chart:
+        path: helm/user-service
+      releaseName: user-service
+      namespace: backend
+      values:
+        image:
+          repository: myapp/user-service
+          tag: "1.2.0"
+        database:
+          host: app-postgres-postgresql.data.svc.cluster.local
+          name: appdb
+        replicas: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      relationships:
+        - target: postgres-db
+          type: depends_on
+
+  - name: order-service
+    type: helm.service
+    spec:
+      chart:
+        path: helm/order-service
+      releaseName: order-service
+      namespace: backend
+      values:
+        image:
+          repository: myapp/order-service
+          tag: "2.1.0"
+        database:
+          host: app-postgres-postgresql.data.svc.cluster.local
+          name: appdb
+        replicas: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      relationships:
+        - target: postgres-db
+          type: depends_on
+
+  # Layer 3: API Gateway (depends on backend services)
+  - name: api-gateway
+    type: helm.service
+    spec:
+      chart:
+        path: helm/api-gateway
+      releaseName: api-gateway
+      namespace: frontend
+      values:
+        image:
+          repository: myapp/api-gateway
+          tag: "3.0.0"
+        services:
+          userService: user-service.backend.svc.cluster.local:8080
+          orderService: order-service.backend.svc.cluster.local:8080
+        ingress:
+          enabled: true
+          hosts:
+            - host: api.example.com
+              paths: ["/"]
+        replicas: 2
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      relationships:
+        - target: user-service
+          type: depends_on
+        - target: order-service
+          type: depends_on
+
+# Define explicit relationships for the dependency graph
+relationships:
+  - from: user-service
+    to: postgres-db
+    type: depends_on
+    
+  - from: order-service
+    to: postgres-db
+    type: depends_on
+    
+  - from: api-gateway
+    to: user-service
+    type: depends_on
+    
+  - from: api-gateway
+    to: order-service
+    type: depends_on

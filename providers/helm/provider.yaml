@@ -1,0 +1,152 @@
+# Helm Provider for Sourceplane
+
+name: helm
+version: 0.1.0
+apiVersion: sourceplane.io/v1
+kind: Provider
+
+metadata:
+  description: Helm-based Kubernetes deployment provider
+  maintainer: Sourceplane Team
+  repository: github.com/sourceplane/providers/helm
+  documentation: https://docs.sourceplane.io/providers/helm
+
+# Versioning Strategy
+# - Semantic versioning (major.minor.patch)
+# - Major: breaking schema changes
+# - Minor: new features, backward compatible
+# - Patch: bug fixes
+versioning:
+  strategy: semver
+  compatibility: backward-compatible-within-minor
+
+# Supported component kinds
+kinds:
+  - name: service
+    fullType: helm.service
+    description: Deploy a Helm chart as a Kubernetes service
+    category: application
+
+# Capability discovery
+capabilities:
+  plan: true          # Supports dry-run/plan
+  apply: true         # Can deploy/install
+  diff: true          # Can show differences
+  destroy: true       # Can uninstall
+  validate: true      # Can validate spec
+  outputs: true       # Produces outputs
+  
+# Execution model
+execution:
+  type: cli-wrapper   # Wraps helm CLI
+  runtime: binary     # Runs as standalone binary
+  mode: declarative   # Declarative, not imperative
+  
+  commands:
+    plan: helm template <release> <chart> --dry-run
+    apply: helm upgrade --install <release> <chart>
+    diff: helm diff upgrade <release> <chart>
+    destroy: helm uninstall <release>
+    validate: helm lint <chart>
+
+# Provider-level configuration
+config:
+  # Where Helm charts are cached
+  chartCache: ~/.sourceplane/providers/helm/charts
+  
+  # Default Helm CLI options
+  helmOptions:
+    atomic: true
+    wait: true
+    timeout: 10m
+
+# Hook points for CI/CD integration
+hooks:
+  pre-plan:
+    - name: lint-chart
+      command: helm lint
+      
+  pre-apply:
+    - name: validate-values
+      command: helm template --validate
+      
+  post-apply:
+    - name: health-check
+      command: kubectl rollout status
+
+# Thin-CI Configuration
+# Defines how this provider participates in CI planning
+thinCI:
+  # Supported CI actions
+  actions:
+    - name: validate
+      description: Lint Helm chart and validate syntax
+      order: 1
+      preSteps:
+        - name: setup-helm
+          command: helm version
+      postSteps: []
+      inputs:
+        chartPath: "."
+      outputs:
+        - lintReport
+        
+    - name: plan
+      description: Generate Kubernetes manifests with helm template
+      order: 2
+      preSteps:
+        - name: setup-kubeconfig
+          command: echo "Setting up kubeconfig"
+      postSteps:
+        - name: save-plan
+          command: echo "Saving plan output"
+      inputs:
+        chartPath: "."
+        valuesPath: "values.yaml"
+        namespace: "default"
+      outputs:
+        - manifests
+        - plan.json
+        
+    - name: apply
+      description: Deploy Helm chart to Kubernetes cluster
+      order: 3
+      preSteps:
+        - name: verify-cluster
+          command: kubectl cluster-info
+      postSteps:
+        - name: verify-deployment
+          command: kubectl rollout status
+      inputs:
+        chartPath: "."
+        valuesPath: "values.yaml"
+        namespace: "default"
+        wait: true
+        atomic: true
+      outputs:
+        - releaseInfo
+        - deployedResources
+        
+    - name: destroy
+      description: Uninstall Helm release
+      order: 4
+      preSteps: []
+      postSteps:
+        - name: cleanup-pvcs
+          command: echo "Cleaning up persistent volumes"
+      inputs:
+        releaseName: ""
+        namespace: "default"
+      outputs: []
+  
+  # Default values merged into every job
+  defaults:
+    timeout: 600
+    kubeconfig: "$KUBECONFIG"
+    helmVersion: "3.12.0"
+    
+  # Default action ordering for multi-action jobs
+  ordering:
+    - validate
+    - plan
+    - apply
