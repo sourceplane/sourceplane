@@ -14,10 +14,10 @@ It codifies **intent as code** — transforming specifications (defined in `inte
 
 ```bash
 # Install Sourceplane CLI
-brew install sourceplane/tap/sp
+brew install sourceplane/sourceplane/sp
 
 # Or install Thin-CI standalone
-brew install sourceplane/tap/thinci
+brew install sourceplane/sourceplane/thinci
 ```
 
 #### Install Script

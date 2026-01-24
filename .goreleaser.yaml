@@ -129,7 +129,8 @@ brews:
       - sp-archive
     repository:
       owner: sourceplane
-      name: homebrew-tap
+      name: homebrew-sourceplane
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/sourceplane/sourceplane
     description: "Sourceplane CLI - Infrastructure as Code orchestration"
     license: Apache-2.0
@@ -143,7 +144,8 @@ brews:
       - thinci-archive
     repository:
       owner: sourceplane
-      name: homebrew-tap
+      name: homebrew-sourceplane
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/sourceplane/sourceplane
     description: "Thin-CI - Lightweight CI orchestrator"
     license: Apache-2.0
