@@ -82,7 +82,7 @@ func ValidateRepository(repo *models.Repository) error {
 				errorMsg += fmt.Sprintf("  • %s\n", p)
 			}
 		}
-		return fmt.Errorf(errorMsg)
+		return fmt.Errorf("%s", errorMsg)
 	}
 
 	return nil

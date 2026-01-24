@@ -6,9 +6,11 @@ metadata:
 
 providers:
   helm:
-    version: "1.0.0"
+    source: github.com/sourceplane/provider-helm
+    version: ">=0.3.0"
   terraform:
-    version: "0.1.0"
+    source: github.com/sourceplane/provider-terraform
+    version: ">=0.1.0"
 
 components:
   # Infrastructure Layer - Terraform

@@ -35,10 +35,10 @@ func ExecuteThinCI() error {
 func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	thinCIRootCmd.CompletionOptions.DisableDefaultCmd = true
-	
+
 	// Add thin-ci as subcommand to main CLI
 	rootCmd.AddCommand(thinCICmd)
-	
+
 	// Add plan command to standalone thin-ci CLI
 	thinCIRootCmd.AddCommand(thinCIPlanCmd)
 }

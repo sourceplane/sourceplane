@@ -35,7 +35,7 @@ func LoadProvider(providerName string) (*ProviderMetadata, error) {
 	}
 
 	providerPath := filepath.Join(providersDir, providerName, "provider.yaml")
-	
+
 	// Check if provider.yaml exists
 	if _, err := os.Stat(providerPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("provider '%s' not found (expected at %s)", providerName, providerPath)
@@ -92,7 +92,7 @@ func (p *ProviderMetadata) ValidateComponentType(componentType string) error {
 	// Check if the component type matches provider.kind format
 	expectedPrefix := p.Name + "."
 	if !strings.HasPrefix(componentType, expectedPrefix) {
-		return fmt.Errorf("component type '%s' does not match provider '%s' (expected format: %s<kind>)", 
+		return fmt.Errorf("component type '%s' does not match provider '%s' (expected format: %s<kind>)",
 			componentType, p.Name, expectedPrefix)
 	}
 
@@ -112,7 +112,7 @@ func (p *ProviderMetadata) ValidateComponentType(componentType string) error {
 		supportedTypes[i] = k.FullType
 	}
 
-	return fmt.Errorf("component type '%s' is not supported by provider '%s' (supported types: %s)", 
+	return fmt.Errorf("component type '%s' is not supported by provider '%s' (supported types: %s)",
 		componentType, p.Name, strings.Join(supportedTypes, ", "))
 }
 

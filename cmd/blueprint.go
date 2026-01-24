@@ -80,7 +80,7 @@ var planCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Println("📋 Blueprint Plan\n")
+		fmt.Println("📋 Blueprint Plan")
 		fmt.Printf("Provider: %s\n\n", blueprint.Provider)
 
 		if len(blueprint.Repos) == 0 {
@@ -126,7 +126,7 @@ var applyCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Println("🚀 Applying blueprint...\n")
+		fmt.Println("🚀 Applying blueprint...")
 
 		for _, repo := range blueprint.Repos {
 			repoDir := repo.Name

@@ -78,6 +78,14 @@ Both share the same core implementation. See [docs/THINCI_README.md](docs/THINCI
 
 ### Thin-CI Planning
 
+1. **Initialize providers** (like `terraform init`):
+
+```bash
+sp providers init
+```
+
+2. **Generate a CI plan**:
+
 ```bash
 # Using full CLI
 sp thin-ci plan --github --mode=plan

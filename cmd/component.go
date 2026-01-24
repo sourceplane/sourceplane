@@ -197,7 +197,7 @@ var componentCreateCmd = &cobra.Command{
 			return fmt.Errorf("--provider flag is required")
 		}
 
-		fmt.Printf("Creating component '%s' with type '%s' using provider '%s'\n", 
+		fmt.Printf("Creating component '%s' with type '%s' using provider '%s'\n",
 			componentName, componentType, provider)
 		fmt.Println("\n⚠️  Provider functionality not yet implemented")
 		fmt.Println("This will bootstrap the component with implementation files")

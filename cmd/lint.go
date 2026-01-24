@@ -98,7 +98,7 @@ var lintCmd = &cobra.Command{
 				fmt.Printf("  • %s\n", err)
 			}
 			fmt.Println()
-			
+
 			// Show available providers if there were provider errors
 			availableProviders, err := provider.ListAvailableProviders()
 			if err == nil && len(availableProviders) > 0 {
@@ -122,21 +122,21 @@ var lintCmd = &cobra.Command{
 			fmt.Println("✅ No issues found")
 			fmt.Printf("\nRepository: %s\n", repo.Metadata.Name)
 			fmt.Printf("Components: %d\n", len(repo.Components))
-			
+
 			// Show provider summary
 			providerTypes := make(map[string]int)
 			for _, comp := range repo.Components {
 				providerName := provider.GetProviderNameFromType(comp.Type)
 				providerTypes[providerName]++
 			}
-			
+
 			if len(providerTypes) > 0 {
 				fmt.Println("\nProviders in use:")
 				for prov, count := range providerTypes {
 					fmt.Printf("  • %s: %d component(s)\n", prov, count)
 				}
 			}
-			
+
 			if repo.Provider != "" {
 				fmt.Printf("\nLegacy provider: %s\n", repo.Provider)
 			}

@@ -1,6 +1,7 @@
 # Binaries
 sp
 thinci
+cli
 *.exe
 *.dll
 *.so
@@ -8,6 +9,10 @@ thinci
 
 # Build artifacts
 dist/
+bin/
+
+# Provider cache (local only, like Terraform)
+.sourceplane/
 
 # Test binary
 *.test

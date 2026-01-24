@@ -12,7 +12,7 @@ build: build-sp build-thinci
 # Build the Sourceplane CLI
 build-sp:
 	@echo "Building $(SP_BINARY)..."
-	@go build $(LDFLAGS) -o $(SP_BINARY) ./cmd/sourceplane
+	@go build $(LDFLAGS) -o $(SP_BINARY) ./cmd/sp
 	@echo "✅ Build complete: ./$(SP_BINARY)"
 
 # Build the Thin-CI standalone binary
@@ -75,19 +75,19 @@ release:
 	@echo "Building release binaries..."
 	@mkdir -p dist
 	@echo "Building for Linux AMD64..."
-	@GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-linux-amd64 ./cmd/sourceplane
+	@GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-linux-amd64 ./cmd/sp
 	@GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o dist/$(THINCI_BINARY)-linux-amd64 ./cmd/thinci
 	@echo "Building for Linux ARM64..."
-	@GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-linux-arm64 ./cmd/sourceplane
+	@GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-linux-arm64 ./cmd/sp
 	@GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o dist/$(THINCI_BINARY)-linux-arm64 ./cmd/thinci
 	@echo "Building for macOS AMD64..."
-	@GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-darwin-amd64 ./cmd/sourceplane
+	@GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-darwin-amd64 ./cmd/sp
 	@GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o dist/$(THINCI_BINARY)-darwin-amd64 ./cmd/thinci
 	@echo "Building for macOS ARM64..."
-	@GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-darwin-arm64 ./cmd/sourceplane
+	@GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-darwin-arm64 ./cmd/sp
 	@GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o dist/$(THINCI_BINARY)-darwin-arm64 ./cmd/thinci
 	@echo "Building for Windows AMD64..."
-	@GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-windows-amd64.exe ./cmd/sourceplane
+	@GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o dist/$(SP_BINARY)-windows-amd64.exe ./cmd/sp
 	@GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o dist/$(THINCI_BINARY)-windows-amd64.exe ./cmd/thinci
 	@echo "✅ Release binaries built in dist/"
 

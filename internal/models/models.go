@@ -18,13 +18,13 @@ type Provider struct {
 
 // Repository represents an intent.yaml file (new format) or legacy sourceplane.yaml
 type Repository struct {
-	APIVersion    string                 `yaml:"apiVersion"`
-	Kind          string                 `yaml:"kind"`
-	Metadata      RepositoryMetadata     `yaml:"metadata"`
-	Providers     map[string]Provider    `yaml:"providers,omitempty"`
-	Provider      string                 `yaml:"provider,omitempty"` // Legacy support
-	Components    []Component            `yaml:"components"`
-	Relationships []Relationship         `yaml:"relationships,omitempty"`
+	APIVersion    string              `yaml:"apiVersion"`
+	Kind          string              `yaml:"kind"`
+	Metadata      RepositoryMetadata  `yaml:"metadata"`
+	Providers     map[string]Provider `yaml:"providers,omitempty"`
+	Provider      string              `yaml:"provider,omitempty"` // Legacy support
+	Components    []Component         `yaml:"components"`
+	Relationships []Relationship      `yaml:"relationships,omitempty"`
 }
 
 // Relationship between components

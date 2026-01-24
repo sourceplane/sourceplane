@@ -11,6 +11,7 @@ import (
 
 	"github.com/sourceplane/cli/internal/models"
 	"github.com/sourceplane/cli/internal/parser"
+	provider "github.com/sourceplane/cli/internal/providers"
 	"github.com/sourceplane/cli/internal/thinci"
 )
 
@@ -53,7 +54,7 @@ func init() {
 
 	// Mark target as required (at least one)
 	thinCIPlanCmd.MarkFlagsOneRequired("github", "gitlab")
-	
+
 	// Add plan command to thin-ci command (for use as subcommand of sp)
 	thinCICmd.AddCommand(thinCIPlanCmd)
 }
@@ -177,10 +178,10 @@ func loadIntentFiles(paths []string) ([]*models.Repository, error) {
 func getChangedFiles(repoPath, baseRef, headRef string) ([]string, error) {
 	// This is a placeholder - in production, use git command or library
 	// For now, return a mock list for testing
-	
+
 	// TODO: Implement actual git diff
 	// Example: git diff --name-only base..head
-	
+
 	return []string{
 		"intent.yaml",
 		"terraform/vpc-network/main.tf",
@@ -190,6 +191,35 @@ func getChangedFiles(repoPath, baseRef, headRef string) ([]string, error) {
 
 // loadProviderRegistry loads all providers and creates a registry
 func loadProviderRegistry(repoPath string) (*thinci.ProviderRegistry, error) {
+	registry := thinci.NewProviderRegistry()
+
+	// Find intent.yaml in repo
+	intentPath := filepath.Join(repoPath, "intent.yaml")
+	if _, err := os.Stat(intentPath); os.IsNotExist(err) {
+		// Try legacy approach - load from providers directory
+		return loadProvidersLegacy(repoPath)
+	}
+
+	// Load providers from intent.yaml using new loader
+	providers, err := provider.LoadProvidersFromIntent(intentPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load providers from intent: %w", err)
+	}
+
+	// Convert to thin-ci provider metadata and register
+	for providerName, prov := range providers {
+		metadata, err := convertToProviderMetadata(providerName, prov)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert provider %s: %w", providerName, err)
+		}
+		registry.RegisterProvider(metadata)
+	}
+
+	return registry, nil
+}
+
+// loadProvidersLegacy loads providers from local providers directory (backward compatibility)
+func loadProvidersLegacy(repoPath string) (*thinci.ProviderRegistry, error) {
 	registry := thinci.NewProviderRegistry()
 
 	// Find providers directory
@@ -218,15 +248,71 @@ func loadProviderRegistry(repoPath string) (*thinci.ProviderRegistry, error) {
 		}
 
 		// Load provider
-		provider, err := loadProviderMetadata(providerPath)
+		providerMeta, err := loadProviderMetadata(providerPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load provider %s: %w", providerName, err)
 		}
 
-		registry.RegisterProvider(provider)
+		registry.RegisterProvider(providerMeta)
 	}
 
 	return registry, nil
+}
+
+// convertToProviderMetadata converts a provider.Provider to thinci.ProviderMetadata
+func convertToProviderMetadata(name string, prov *provider.Provider) (*thinci.ProviderMetadata, error) {
+	// Extract thin-ci configuration from provider
+	thinCIConfig, ok := prov.Extensions["thinCI"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("provider %s missing thinCI configuration", name)
+	}
+
+	// Convert actions
+	actionsRaw, ok := thinCIConfig["actions"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("provider %s missing thinCI actions", name)
+	}
+
+	var actions []thinci.ProviderAction
+	for _, actionRaw := range actionsRaw {
+		actionData, err := yaml.Marshal(actionRaw)
+		if err != nil {
+			return nil, err
+		}
+
+		var action thinci.ProviderAction
+		if err := yaml.Unmarshal(actionData, &action); err != nil {
+			return nil, err
+		}
+
+		actions = append(actions, action)
+	}
+
+	// Extract defaults
+	defaults := make(map[string]any)
+	if defaultsRaw, ok := thinCIConfig["defaults"].(map[string]interface{}); ok {
+		defaults = defaultsRaw
+	}
+
+	// Extract ordering
+	var ordering []string
+	if orderingRaw, ok := thinCIConfig["ordering"].([]interface{}); ok {
+		for _, o := range orderingRaw {
+			if s, ok := o.(string); ok {
+				ordering = append(ordering, s)
+			}
+		}
+	}
+
+	return &thinci.ProviderMetadata{
+		Name:    name,
+		Version: prov.Version,
+		ThinCI: thinci.ThinCIConfig{
+			Actions:  actions,
+			Defaults: defaults,
+			Ordering: ordering,
+		},
+	}, nil
 }
 
 // loadProviderMetadata loads provider metadata including thin-ci config

@@ -120,13 +120,13 @@ var orgGraphCmd = &cobra.Command{
 			if err != nil {
 				continue
 			}
-			
+
 			// Validate each repository
 			if err := validator.ValidateRepository(repo); err != nil {
 				fmt.Printf("⚠️  Skipping %s: validation failed\n", repo.Metadata.Name)
 				continue
 			}
-			
+
 			repoList = append(repoList, repo)
 			repoMap[repo.Metadata.Name] = len(repo.Components)
 			componentCount += len(repo.Components)
