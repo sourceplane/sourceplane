@@ -268,7 +268,7 @@ func convertToProviderMetadata(name string, prov *provider.Provider) (*thinci.Pr
 	}
 
 	// Convert actions
-	actionsRaw, ok := thinCIConfig["actions"].(map[string]interface{})
+	actionsRaw, ok := thinCIConfig["actions"].([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("provider %s missing thinCI actions", name)
 	}
