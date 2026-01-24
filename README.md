@@ -73,18 +73,6 @@ scoop install thinci
 
 Download the latest `.zip` from [releases](https://github.com/sourceplane/cli/releases) and add to PATH.
 
-### Docker
-
-```bash
-# Sourceplane CLI
-docker pull ghcr.io/sourceplane/sp:latest
-docker run ghcr.io/sourceplane/sp:latest version
-
-# Thin-CI
-docker pull ghcr.io/sourceplane/thinci:latest
-docker run ghcr.io/sourceplane/thinci:latest version
-```
-
 ### From Source
 
 ```bash
