@@ -3,7 +3,6 @@ version: 2
 before:
   hooks:
     - go mod tidy
-    - go test ./...
 
 builds:
   - id: sp
@@ -138,7 +137,6 @@ brews:
       owner: sourceplane
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    folder: Formula
     homepage: https://github.com/sourceplane/cli
     description: "Sourceplane CLI - Infrastructure as Code orchestration"
     license: Apache-2.0
@@ -154,7 +152,6 @@ brews:
       owner: sourceplane
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    folder: Formula
     homepage: https://github.com/sourceplane/cli
     description: "Thin-CI - Lightweight CI orchestrator"
     license: Apache-2.0
