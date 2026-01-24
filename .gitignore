@@ -1,7 +1,7 @@
-# Binaries
-sp
-thinci
-cli
+# Binaries (at root level only)
+/sp
+/thinci
+/cli
 *.exe
 *.dll
 *.so
