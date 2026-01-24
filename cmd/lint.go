@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/sourceplane/cli/internal/parser"
-	"github.com/sourceplane/cli/internal/provider"
+	"github.com/sourceplane/sourceplane/internal/parser"
+	"github.com/sourceplane/sourceplane/internal/provider"
 	"github.com/spf13/cobra"
 )
 

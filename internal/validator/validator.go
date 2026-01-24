@@ -3,8 +3,8 @@ package validator
 import (
 	"fmt"
 
-	"github.com/sourceplane/cli/internal/models"
-	"github.com/sourceplane/cli/internal/provider"
+	"github.com/sourceplane/sourceplane/internal/models"
+	"github.com/sourceplane/sourceplane/internal/provider"
 )
 
 // ValidateRepository validates a repository definition against available providers

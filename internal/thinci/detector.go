@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sourceplane/cli/internal/models"
+	"github.com/sourceplane/sourceplane/internal/models"
 )
 
 // ChangeDetector identifies which components are affected by file changes

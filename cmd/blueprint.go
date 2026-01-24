@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sourceplane/cli/internal/parser"
+	"github.com/sourceplane/sourceplane/internal/parser"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

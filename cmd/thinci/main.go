@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sourceplane/cli/cmd"
+	"github.com/sourceplane/sourceplane/cmd"
 )
 
 func main() {

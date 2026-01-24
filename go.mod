@@ -1,4 +1,4 @@
-module github.com/sourceplane/cli
+module github.com/sourceplane/sourceplane
 
 go 1.21
 

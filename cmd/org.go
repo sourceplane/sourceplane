@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sourceplane/cli/internal/models"
-	"github.com/sourceplane/cli/internal/parser"
-	"github.com/sourceplane/cli/internal/validator"
+	"github.com/sourceplane/sourceplane/internal/models"
+	"github.com/sourceplane/sourceplane/internal/parser"
+	"github.com/sourceplane/sourceplane/internal/validator"
 	"github.com/spf13/cobra"
 )
 

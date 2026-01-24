@@ -9,10 +9,10 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/sourceplane/cli/internal/models"
-	"github.com/sourceplane/cli/internal/parser"
-	provider "github.com/sourceplane/cli/internal/providers"
-	"github.com/sourceplane/cli/internal/thinci"
+	"github.com/sourceplane/sourceplane/internal/models"
+	"github.com/sourceplane/sourceplane/internal/parser"
+	provider "github.com/sourceplane/sourceplane/internal/providers"
+	"github.com/sourceplane/sourceplane/internal/thinci"
 )
 
 var (

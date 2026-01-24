@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sourceplane/cli/internal/models"
+	"github.com/sourceplane/sourceplane/internal/models"
 	"gopkg.in/yaml.v3"
 )
 

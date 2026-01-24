@@ -118,7 +118,7 @@ changelog:
 release:
   github:
     owner: sourceplane
-    name: cli
+    name: sourceplane
   draft: false
   prerelease: auto
   name_template: "Sourceplane CLI v{{.Version}}"
@@ -131,7 +131,7 @@ brews:
       owner: sourceplane
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    homepage: https://github.com/sourceplane/cli
+    homepage: https://github.com/sourceplane/sourceplane
     description: "Sourceplane CLI - Infrastructure as Code orchestration"
     license: Apache-2.0
     install: |
@@ -146,7 +146,7 @@ brews:
       owner: sourceplane
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    homepage: https://github.com/sourceplane/cli
+    homepage: https://github.com/sourceplane/sourceplane
     description: "Thin-CI - Lightweight CI orchestrator"
     license: Apache-2.0
     install: |

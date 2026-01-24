@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sourceplane/cli/internal/models"
+	"github.com/sourceplane/sourceplane/internal/models"
 )
 
 // Planner generates CI execution plans
