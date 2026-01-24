@@ -1,0 +1,250 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: sp
+    main: ./cmd/sp
+    binary: sp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: windows
+        goarch: arm
+    ldflags:
+      - -s -w
+      - -X github.com/sourceplane/cli/internal/version.Version={{.Version}}
+      - -X github.com/sourceplane/cli/internal/version.Commit={{.Commit}}
+      - -X github.com/sourceplane/cli/internal/version.Date={{.Date}}
+
+  - id: thinci
+    main: ./cmd/thinci
+    binary: thinci
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: windows
+        goarch: arm
+    ldflags:
+      - -s -w
+      - -X github.com/sourceplane/cli/internal/version.Version={{.Version}}
+      - -X github.com/sourceplane/cli/internal/version.Commit={{.Commit}}
+      - -X github.com/sourceplane/cli/internal/version.Date={{.Date}}
+
+archives:
+  - id: sp-archive
+    builds:
+      - sp
+    format: tar.gz
+    name_template: >-
+      sp_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
+
+  - id: thinci-archive
+    builds:
+      - thinci
+    format: tar.gz
+    name_template: >-
+      thinci_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: 'New Features'
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: 'Documentation'
+      regexp: "^.*docs[(\\w)]*:+.*$"
+      order: 2
+    - title: 'Other Changes'
+      order: 999
+
+release:
+  github:
+    owner: sourceplane
+    name: cli
+  draft: false
+  prerelease: auto
+  name_template: "Sourceplane CLI v{{.Version}}"
+
+brews:
+  - name: sp
+    ids:
+      - sp-archive
+    repository:
+      owner: sourceplane
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    folder: Formula
+    homepage: https://github.com/sourceplane/cli
+    description: "Sourceplane CLI - Infrastructure as Code orchestration"
+    license: Apache-2.0
+    install: |
+      bin.install "sp"
+    test: |
+      system "#{bin}/sp version"
+
+  - name: thinci
+    ids:
+      - thinci-archive
+    repository:
+      owner: sourceplane
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    folder: Formula
+    homepage: https://github.com/sourceplane/cli
+    description: "Thin-CI - Lightweight CI orchestrator"
+    license: Apache-2.0
+    install: |
+      bin.install "thinci"
+    test: |
+      system "#{bin}/thinci version"
+
+dockers:
+  - ids:
+      - sp
+    image_templates:
+      - "ghcr.io/sourceplane/sp:{{ .Version }}-amd64"
+      - "ghcr.io/sourceplane/sp:latest-amd64"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title=sp"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    dockerfile: Dockerfile
+
+  - ids:
+      - sp
+    image_templates:
+      - "ghcr.io/sourceplane/sp:{{ .Version }}-arm64"
+      - "ghcr.io/sourceplane/sp:latest-arm64"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title=sp"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    dockerfile: Dockerfile
+
+  - ids:
+      - thinci
+    image_templates:
+      - "ghcr.io/sourceplane/thinci:{{ .Version }}-amd64"
+      - "ghcr.io/sourceplane/thinci:latest-amd64"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title=thinci"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    dockerfile: Dockerfile.thinci
+
+  - ids:
+      - thinci
+    image_templates:
+      - "ghcr.io/sourceplane/thinci:{{ .Version }}-arm64"
+      - "ghcr.io/sourceplane/thinci:latest-arm64"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title=thinci"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    dockerfile: Dockerfile.thinci
+
+docker_manifests:
+  - name_template: "ghcr.io/sourceplane/sp:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/sourceplane/sp:{{ .Version }}-amd64"
+      - "ghcr.io/sourceplane/sp:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/sourceplane/sp:latest"
+    image_templates:
+      - "ghcr.io/sourceplane/sp:latest-amd64"
+      - "ghcr.io/sourceplane/sp:latest-arm64"
+
+  - name_template: "ghcr.io/sourceplane/thinci:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/sourceplane/thinci:{{ .Version }}-amd64"
+      - "ghcr.io/sourceplane/thinci:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/sourceplane/thinci:latest"
+    image_templates:
+      - "ghcr.io/sourceplane/thinci:latest-amd64"
+      - "ghcr.io/sourceplane/thinci:latest-arm64"

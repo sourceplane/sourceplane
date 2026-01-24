@@ -8,23 +8,92 @@ It codifies **intent as code** — transforming specifications (defined in `inte
 
 ## Installation
 
-### Pre-built Binaries
+### macOS / Linux
 
-Download from [Releases](https://github.com/sourceplane/cli/releases):
+#### Homebrew
 
 ```bash
-# macOS/Linux
-curl -L https://github.com/sourceplane/cli/releases/latest/download/sp-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) -o sp
-chmod +x sp
-sudo mv sp /usr/local/bin/
+# Install Sourceplane CLI
+brew install sourceplane/tap/sp
 
-# Or install thin-ci standalone
-curl -L https://github.com/sourceplane/cli/releases/latest/download/thinci-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) -o thinci
-chmod +x thinci
-sudo mv thinci /usr/local/bin/
+# Or install Thin-CI standalone
+brew install sourceplane/tap/thinci
 ```
 
-### Build from Source
+#### Install Script
+
+```bash
+# Install Sourceplane CLI
+curl -sSfL https://raw.githubusercontent.com/sourceplane/cli/main/install.sh | sh
+
+# Or install Thin-CI standalone
+BINARY=thinci curl -sSfL https://raw.githubusercontent.com/sourceplane/cli/main/install.sh | sh
+```
+
+#### Manual Download
+
+Download the latest binary from [releases](https://github.com/sourceplane/cli/releases):
+
+```bash
+# macOS (Apple Silicon) - sp
+curl -LO https://github.com/sourceplane/cli/releases/latest/download/sp_v*_Darwin_arm64.tar.gz
+tar -xzf sp_v*_Darwin_arm64.tar.gz
+sudo mv sp /usr/local/bin/
+
+# macOS (Intel) - sp
+curl -LO https://github.com/sourceplane/cli/releases/latest/download/sp_v*_Darwin_x86_64.tar.gz
+tar -xzf sp_v*_Darwin_x86_64.tar.gz
+sudo mv sp /usr/local/bin/
+
+# Linux (amd64) - sp
+curl -LO https://github.com/sourceplane/cli/releases/latest/download/sp_v*_Linux_x86_64.tar.gz
+tar -xzf sp_v*_Linux_x86_64.tar.gz
+sudo mv sp /usr/local/bin/
+
+# Linux (arm64) - sp
+curl -LO https://github.com/sourceplane/cli/releases/latest/download/sp_v*_Linux_arm64.tar.gz
+tar -xzf sp_v*_Linux_arm64.tar.gz
+sudo mv sp /usr/local/bin/
+```
+
+Replace `sp` with `thinci` in the URLs above to install Thin-CI instead.
+
+### Windows
+
+#### Scoop
+
+```powershell
+scoop bucket add sourceplane https://github.com/sourceplane/scoop-bucket
+scoop install sp
+# or
+scoop install thinci
+```
+
+#### Manual Download
+
+Download the latest `.zip` from [releases](https://github.com/sourceplane/cli/releases) and add to PATH.
+
+### Docker
+
+```bash
+# Sourceplane CLI
+docker pull ghcr.io/sourceplane/sp:latest
+docker run ghcr.io/sourceplane/sp:latest version
+
+# Thin-CI
+docker pull ghcr.io/sourceplane/thinci:latest
+docker run ghcr.io/sourceplane/thinci:latest version
+```
+
+### From Source
+
+```bash
+go install github.com/sourceplane/cli/cmd/sp@latest
+# or
+go install github.com/sourceplane/cli/cmd/thinci@latest
+```
+
+Alternatively, clone and build:
 
 ```bash
 # Clone the repository
