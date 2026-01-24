@@ -1,0 +1,7 @@
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+COPY thinci /usr/local/bin/thinci
+
+ENTRYPOINT ["/usr/local/bin/thinci"]
