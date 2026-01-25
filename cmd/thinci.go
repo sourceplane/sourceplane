@@ -23,6 +23,7 @@ var (
 	thinCIChangedOnly bool
 	thinCIEnvironment string
 	thinCIOutput      string
+	intentPath        string
 )
 
 var thinCICmd = &cobra.Command{
@@ -51,6 +52,7 @@ func init() {
 	thinCIPlanCmd.Flags().BoolVar(&thinCIChangedOnly, "changed-only", true, "Only include changed components")
 	thinCIPlanCmd.Flags().StringVarP(&thinCIEnvironment, "env", "e", "", "Target environment (prod, staging, etc.)")
 	thinCIPlanCmd.Flags().StringVarP(&thinCIOutput, "output", "o", "json", "Output format: json or yaml")
+	thinCIPlanCmd.Flags().StringVarP(&intentPath, "intent", "i", "", "Path to intent.yaml file (default: ./intent.yaml)")
 
 	// Mark target as required (at least one)
 	thinCIPlanCmd.MarkFlagsOneRequired("github", "gitlab")
@@ -78,17 +80,20 @@ func runThinCIPlan(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	// Find all intent.yaml files
-	intentFiles, err := findIntentFiles(cwd)
-	if err != nil {
-		return fmt.Errorf("failed to find intent files: %w", err)
+	// Determine intent file path
+	if intentPath == "" {
+		intentPath = filepath.Join(cwd, "intent.yaml")
+	} else if !filepath.IsAbs(intentPath) {
+		intentPath = filepath.Join(cwd, intentPath)
 	}
 
-	if len(intentFiles) == 0 {
-		return fmt.Errorf("no intent.yaml files found in repository")
+	// Check if intent.yaml exists
+	if _, err := os.Stat(intentPath); os.IsNotExist(err) {
+		return fmt.Errorf("could not find intent.yaml at %s", intentPath)
 	}
 
-	// Load all intent files
+	// Load the intent file
+	intentFiles := []string{intentPath}
 	intents, err := loadIntentFiles(intentFiles)
 	if err != nil {
 		return fmt.Errorf("failed to load intent files: %w", err)

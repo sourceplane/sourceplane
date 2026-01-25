@@ -136,7 +136,7 @@ func (c *ProviderCache) downloadGitHubProvider(owner, repo, version, destDir str
 	// Construct GitHub release URL
 	url := fmt.Sprintf("https://github.com/%s/%s/archive/refs/tags/%s.tar.gz", owner, repo, tagVersion)
 
-	fmt.Printf("Downloading provider from %s...\n", url)
+	fmt.Fprintf(os.Stderr, "Downloading provider from %s...\n", url)
 
 	// Download tarball
 	resp, err := http.Get(url)

@@ -60,7 +60,7 @@ func LoadProvidersFromIntent(intentPath string) (map[string]*Provider, error) {
 	intentDir := filepath.Dir(intentPath)
 
 	for name, config := range intent.Providers {
-		fmt.Printf("Loading provider: %s\n", name)
+		fmt.Fprintf(os.Stderr, "Loading provider: %s\n", name)
 
 		var provider *Provider
 
