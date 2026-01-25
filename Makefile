@@ -4,7 +4,7 @@
 SP_BINARY=sp
 THINCI_BINARY=thinci
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-LDFLAGS=-ldflags "-X main.version=$(VERSION)"
+LDFLAGS=-ldflags "-X github.com/sourceplane/sourceplane/cmd.version=$(VERSION)"
 
 # Build all binaries
 build: build-sp build-thinci

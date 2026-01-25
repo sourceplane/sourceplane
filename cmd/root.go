@@ -4,6 +4,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// version is set at build time via ldflags
+var version = "dev"
+
 var rootCmd = &cobra.Command{
 	Use:   "sp",
 	Short: "Sourceplane CLI - Component-driven tool for software organizations",
@@ -11,7 +14,7 @@ var rootCmd = &cobra.Command{
 and managing software repositories and organizations.
 
 It codifies intent as code and enables organizational introspection and architectural analysis.`,
-	Version: "0.1.0",
+	Version: version,
 }
 
 var thinCIRootCmd = &cobra.Command{
@@ -19,7 +22,7 @@ var thinCIRootCmd = &cobra.Command{
 	Short: "Thin-CI - Deterministic CI/CD planning engine",
 	Long: `Thin-CI generates deterministic execution plans for CI systems.
 It does not execute CI, it only creates plans that can be rendered into workflows.`,
-	Version: "0.1.0",
+	Version: version,
 }
 
 // Execute runs the root command
