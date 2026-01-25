@@ -117,11 +117,11 @@ func InitProviders(intentPath string) error {
 
 	for name, config := range intent.Providers {
 		if config.Source == "" {
-			fmt.Printf("Skipping %s (local provider)\n", name)
+			fmt.Fprintf(os.Stderr, "Skipping %s (local provider)\n", name)
 			continue
 		}
 
-		fmt.Printf("Initializing provider: %s@%s from %s\n", name, config.Version, config.Source)
+		fmt.Fprintf(os.Stderr, "Initializing provider: %s@%s from %s\n", name, config.Version, config.Source)
 
 		providerPath, err := cache.GetProviderPath(config.Source, config.Version)
 		if err != nil {
@@ -129,7 +129,7 @@ func InitProviders(intentPath string) error {
 		}
 
 		manifest[name] = providerPath
-		fmt.Printf("✓ Provider %s ready at %s\n", name, providerPath)
+		fmt.Fprintf(os.Stderr, "✓ Provider %s ready at %s\n", name, providerPath)
 	}
 
 	// Save manifest

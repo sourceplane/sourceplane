@@ -204,7 +204,7 @@ func (c *ProviderCache) downloadGitHubProvider(owner, repo, version, destDir str
 		}
 	}
 
-	fmt.Printf("Provider cached at %s\n", destDir)
+	fmt.Fprintf(os.Stderr, "Provider cached at %s\n", destDir)
 	return nil
 }
 
