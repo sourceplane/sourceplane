@@ -3,7 +3,7 @@ package version
 // Version information
 var (
 	// Version is the current version of the CLI
-	Version = "0.2.1"
+	Version = "0.2.2"
 
 	// GitCommit is the git commit hash (set during build)
 	GitCommit = "unknown"
