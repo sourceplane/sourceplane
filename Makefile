@@ -3,7 +3,7 @@
 # Binary names
 SP_BINARY=sp
 THINCI_BINARY=thinci
-VERSION?=0.1.0
+VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS=-ldflags "-X main.version=$(VERSION)"
 
 # Build all binaries
