@@ -46,14 +46,14 @@ func (f *ProviderFetcher) FetchProvider(source, version string) (string, error) 
 	gitDir := filepath.Join(providerPath, ".git")
 	if _, err := os.Stat(gitDir); err == nil {
 		// Provider exists, try to update it
-		fmt.Printf("Updating provider %s from %s...\n", providerName, source)
+		fmt.Fprintf(os.Stderr, "Updating provider %s from %s...\n", providerName, source)
 		if err := f.updateProvider(providerPath); err != nil {
-			fmt.Printf("Warning: failed to update provider: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Warning: failed to update provider: %v\n", err)
 			// Continue with existing version
 		}
 	} else {
 		// Provider doesn't exist, clone it
-		fmt.Printf("Fetching provider %s from %s...\n", providerName, source)
+		fmt.Fprintf(os.Stderr, "Fetching provider %s from %s...\n", providerName, source)
 		if err := f.cloneProvider(repoURL, providerPath); err != nil {
 			return "", fmt.Errorf("failed to fetch provider: %w", err)
 		}
@@ -96,7 +96,7 @@ func (f *ProviderFetcher) parseSource(source string) (string, string) {
 // cloneProvider clones a git repository
 func (f *ProviderFetcher) cloneProvider(repoURL, destPath string) error {
 	cmd := exec.Command("git", "clone", "--depth", "1", repoURL, destPath)
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	
 	if err := cmd.Run(); err != nil {
@@ -110,7 +110,7 @@ func (f *ProviderFetcher) cloneProvider(repoURL, destPath string) error {
 func (f *ProviderFetcher) updateProvider(providerPath string) error {
 	cmd := exec.Command("git", "pull", "--ff-only")
 	cmd.Dir = providerPath
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	
 	if err := cmd.Run(); err != nil {

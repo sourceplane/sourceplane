@@ -281,7 +281,7 @@ func loadProviderRegistry(repoPath string, intents []*models.Repository) (*thinc
 			return nil, fmt.Errorf("provider.yaml not found for provider %s at %s", name, providerPath)
 		}
 
-		fmt.Printf("Loading provider: %s from %s\n", name, providerPath)
+		fmt.Fprintf(os.Stderr, "Loading provider: %s from %s\n", name, providerPath)
 
 		// Load provider metadata
 		providerMeta, err := loadProviderMetadata(providerPath)
@@ -294,7 +294,7 @@ func loadProviderRegistry(repoPath string, intents []*models.Repository) (*thinc
 
 	// If no providers were loaded from intents, fall back to loading from local providers directory
 	if len(providerSources) == 0 {
-		fmt.Println("No providers defined in intent files, searching local providers directory...")
+		fmt.Fprintln(os.Stderr, "No providers defined in intent files, searching local providers directory...")
 		return loadLocalProviders(repoPath)
 	}
 
@@ -343,7 +343,7 @@ func loadLocalProviders(repoPath string) (*thinci.ProviderRegistry, error) {
 			continue
 		}
 
-		fmt.Printf("Loading provider: %s\n", providerName)
+		fmt.Fprintf(os.Stderr, "Loading provider: %s\n", providerName)
 
 		// Load provider metadata directly from provider.yaml
 		providerMeta, err := loadProviderMetadata(providerPath)
