@@ -2,11 +2,11 @@
 set -e
 
 # Sourceplane CLI installer script
-# Usage: curl -sSfL https://raw.githubusercontent.com/sourceplane/cli/main/install.sh | sh
+# Usage: curl -sSfL https://raw.githubusercontent.com/sourceplane/sourceplane/main/install.sh | sh
 # Or with BINARY env var: BINARY=thinci curl -sSfL ... | sh
 
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
-REPO="sourceplane/cli"
+REPO="sourceplane/sourceplane"
 BINARY_NAME="${BINARY:-sp}"
 
 get_latest_release() {
@@ -20,13 +20,13 @@ detect_os_arch() {
   ARCH=$(uname -m)
   
   case "$OS" in
-    linux) OS="Linux" ;;
-    darwin) OS="Darwin" ;;
+    linux) OS="linux" ;;
+    darwin) OS="darwin" ;;
     *) echo "Unsupported OS: $OS"; exit 1 ;;
   esac
   
   case "$ARCH" in
-    x86_64|amd64) ARCH="x86_64" ;;
+    x86_64|amd64) ARCH="amd64" ;;
     aarch64|arm64) ARCH="arm64" ;;
     armv7l) ARCH="armv7" ;;
     *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
