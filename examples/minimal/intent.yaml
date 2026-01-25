@@ -1,0 +1,29 @@
+apiVersion: sourceplane.io/v1
+kind: Intent
+
+metadata:
+  name: minimal-example
+  description: Minimal Helm service deployment example
+
+providers:
+  helm:
+    source: github.com/sourceplane/provider-walrus-platform-native-eks
+    version: ">=0.1.0"
+    
+    # Provider-level defaults
+    defaults:
+      service:
+        namespace: default
+        values:
+          replicas: 1
+          resources:
+            cpu: "100m"
+            memory: "128Mi"
+
+components:
+  # Simplest possible definition
+  - name: hello-app
+    type: helm.service
+    spec:
+      chart:
+        path: ./charts/hello-app

@@ -1,0 +1,137 @@
+Loading provider: helm
+{
+  "target": "github",
+  "mode": "plan",
+  "metadata": {
+    "repository": "/Users/irinelinson/sourceplane/sourceplane",
+    "baseRef": "main",
+    "headRef": "HEAD",
+    "changedFiles": [
+      "intent.yaml",
+      "terraform/vpc-network/main.tf",
+      "helm/api-service/values.yaml"
+    ],
+    "timestamp": "2026-01-26T00:38:19+05:30"
+  },
+  "jobs": [
+    {
+      "action": "validate",
+      "artifacts": [
+        {
+          "name": "lint-report",
+          "path": "lint-report.txt"
+        }
+      ],
+      "commands": [
+        "helm lint .",
+        "helm template hello-app . --validate"
+      ],
+      "component": "hello-app",
+      "dependsOn": [],
+      "id": "hello-app-validate",
+      "inputs": {
+        "chartPath": ".",
+        "component": "hello-app",
+        "helmVersion": "3.12.0",
+        "kubeconfig": "$KUBECONFIG",
+        "timeout": 600
+      },
+      "metadata": {
+        "continueOnError": false,
+        "env": {
+          "SP_ACTION": "validate",
+          "SP_COMPONENT": "hello-app",
+          "SP_PROVIDER": "helm"
+        },
+        "permissions": [
+          "id-token",
+          "contents"
+        ],
+        "runsOn": "ubuntu-latest",
+        "timeout": 10
+      },
+      "outputs": [
+        "lintReport"
+      ],
+      "preSteps": [
+        {
+          "name": "setup-helm",
+          "command": "helm version"
+        }
+      ],
+      "provider": "helm"
+    },
+    {
+      "action": "plan",
+      "artifacts": [
+        {
+          "name": "plan-output",
+          "path": "plan.json"
+        },
+        {
+          "name": "manifests",
+          "path": "manifests/"
+        }
+      ],
+      "cache": {
+        "enabled": true,
+        "key": "helm-hello-app-{{.checksum}}",
+        "paths": [
+          "~/.cache/helm"
+        ]
+      },
+      "commands": [
+        "helm template hello-app . --values values.yaml --namespace default --dry-run",
+        "helm diff upgrade hello-app . --values values.yaml --namespace default"
+      ],
+      "component": "hello-app",
+      "dependsOn": [
+        "hello-app-validate"
+      ],
+      "id": "hello-app-plan",
+      "inputs": {
+        "chartPath": ".",
+        "component": "hello-app",
+        "helmVersion": "3.12.0",
+        "kubeconfig": "$KUBECONFIG",
+        "namespace": "default",
+        "timeout": 600,
+        "valuesPath": "values.yaml"
+      },
+      "metadata": {
+        "env": {
+          "SP_ACTION": "plan",
+          "SP_COMPONENT": "hello-app",
+          "SP_PROVIDER": "helm"
+        },
+        "permissions": [
+          {
+            "contents": "read"
+          },
+          {
+            "id-token": "write"
+          }
+        ],
+        "runsOn": "ubuntu-latest",
+        "timeout": 15
+      },
+      "outputs": [
+        "manifests",
+        "plan.json"
+      ],
+      "postSteps": [
+        {
+          "name": "save-plan",
+          "command": "echo \"Saving plan output\""
+        }
+      ],
+      "preSteps": [
+        {
+          "name": "setup-kubeconfig",
+          "command": "echo \"Setting up kubeconfig\""
+        }
+      ],
+      "provider": "helm"
+    }
+  ]
+}

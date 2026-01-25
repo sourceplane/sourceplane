@@ -3,6 +3,7 @@ package thinci
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/sourceplane/sourceplane/internal/models"
@@ -290,18 +291,8 @@ func (p *Planner) generateJobs(nodes []DependencyNode, req PlanRequest) []Job {
 				}
 			}
 
-			// Create job metadata based on target platform
-			metadata := p.createJobMetadata(req.Target, node, action)
-
-			job := Job{
-				ID:        jobID,
-				Component: node.ComponentName,
-				Provider:  node.Provider,
-				Action:    action,
-				Inputs:    inputs,
-				DependsOn: deps,
-				Metadata:  metadata,
-			}
+			// Build job from provider template or use default structure
+			job := p.buildJobFromTemplate(jobID, node, action, deps, inputs, providerAction, req)
 
 			jobs = append(jobs, job)
 			jobDependencies[jobID] = deps
@@ -309,6 +300,94 @@ func (p *Planner) generateJobs(nodes []DependencyNode, req PlanRequest) []Job {
 	}
 
 	return jobs
+}
+
+// buildJobFromTemplate constructs a job using provider's job template
+func (p *Planner) buildJobFromTemplate(
+	jobID string,
+	node DependencyNode,
+	action string,
+	deps []string,
+	inputs map[string]any,
+	providerAction *ProviderAction,
+	req PlanRequest,
+) Job {
+	job := make(Job)
+
+	// Start with core required fields
+	job["id"] = jobID
+	job["component"] = node.ComponentName
+	job["provider"] = node.Provider
+	job["action"] = action
+	job["dependsOn"] = deps
+
+	// If provider has a job template, merge it
+	if providerAction != nil && providerAction.JobTemplate != nil {
+		for k, v := range providerAction.JobTemplate {
+			// Don't override core fields
+			if k != "id" && k != "component" && k != "provider" && k != "action" && k != "dependsOn" {
+				job[k] = v
+			}
+		}
+	}
+
+	// Add standard fields if not defined in template
+	if _, exists := job["inputs"]; !exists {
+		job["inputs"] = inputs
+	} else {
+		// Merge inputs with template inputs
+		if templateInputs, ok := job["inputs"].(map[string]any); ok {
+			for k, v := range inputs {
+				if _, exists := templateInputs[k]; !exists {
+					templateInputs[k] = v
+				}
+			}
+		} else {
+			job["inputs"] = inputs
+		}
+	}
+
+	// Add commands from provider action
+	if _, exists := job["commands"]; !exists {
+		if providerAction != nil && providerAction.Commands != nil {
+			job["commands"] = providerAction.Commands
+		}
+	}
+
+	// Add steps if defined in provider action
+	if providerAction != nil {
+		if len(providerAction.PreSteps) > 0 {
+			job["preSteps"] = providerAction.PreSteps
+		}
+		if len(providerAction.PostSteps) > 0 {
+			job["postSteps"] = providerAction.PostSteps
+		}
+		if len(providerAction.Outputs) > 0 {
+			job["outputs"] = providerAction.Outputs
+		}
+	}
+
+	// Add metadata based on target platform if not in template, otherwise merge
+	if _, exists := job["metadata"]; !exists {
+		metadata := p.createJobMetadata(req.Target, node, action)
+		job["metadata"] = metadata
+	} else {
+		// Merge generated metadata with template metadata
+		templateMetadata, _ := job["metadata"].(map[string]any)
+		generatedMetadata := p.createJobMetadata(req.Target, node, action)
+		
+		// Add generated fields that don't exist in template
+		for k, v := range generatedMetadata {
+			if _, exists := templateMetadata[k]; !exists {
+				templateMetadata[k] = v
+			}
+		}
+	}
+
+	// Resolve templates in the job with actual values
+	p.resolveTemplates(job, inputs)
+
+	return job
 }
 
 // buildJobInputs constructs the inputs map for a job
@@ -341,9 +420,9 @@ func (p *Planner) buildJobInputs(node DependencyNode, provider *ProviderMetadata
 }
 
 // createJobMetadata creates platform-specific job metadata
-func (p *Planner) createJobMetadata(target string, node DependencyNode, action string) JobMetadata {
-	metadata := JobMetadata{
-		Environment: map[string]string{
+func (p *Planner) createJobMetadata(target string, node DependencyNode, action string) map[string]any {
+	metadata := map[string]any{
+		"env": map[string]string{
 			"SP_COMPONENT": node.ComponentName,
 			"SP_PROVIDER":  node.Provider,
 			"SP_ACTION":    action,
@@ -352,15 +431,86 @@ func (p *Planner) createJobMetadata(target string, node DependencyNode, action s
 
 	switch target {
 	case "github":
-		metadata.RunsOn = "ubuntu-latest"
-		metadata.Permissions = []string{"id-token", "contents"}
-		metadata.Timeout = 30
+		metadata["runsOn"] = "ubuntu-latest"
+		metadata["permissions"] = []string{"id-token", "contents"}
+		metadata["timeout"] = 30
 	case "gitlab":
-		metadata.RunsOn = "docker"
-		metadata.Timeout = 30
+		metadata["runsOn"] = "docker"
+		metadata["timeout"] = 30
 	}
 
 	return metadata
+}
+
+// resolveTemplates resolves template variables in job fields with actual values
+func (p *Planner) resolveTemplates(job Job, inputs map[string]any) {
+	// Build template context from job fields and inputs
+	context := make(map[string]string)
+	
+	// Add component name and basic fields
+	if component, ok := job["component"].(string); ok {
+		context["component"] = component
+		context["releaseName"] = component // Default release name is component name
+	}
+	
+	// Add all inputs as template variables
+	for k, v := range inputs {
+		if str, ok := v.(string); ok {
+			context[k] = str
+		} else if num, ok := v.(int); ok {
+			context[k] = fmt.Sprintf("%d", num)
+		} else if b, ok := v.(bool); ok {
+			context[k] = fmt.Sprintf("%t", b)
+		}
+	}
+	
+	// Add environment if available
+	if env, ok := inputs["environment"].(string); ok {
+		context["environment"] = env
+	}
+	
+	// Recursively resolve templates in the job
+	// Need to reassign resolved values back to the job map
+	for k, v := range job {
+		job[k] = p.resolveValue(v, context)
+	}
+}
+
+// resolveValue recursively resolves templates in any value type
+func (p *Planner) resolveValue(val any, context map[string]string) any {
+	switch v := val.(type) {
+	case string:
+		return p.resolveString(v, context)
+	case []string:
+		resolved := make([]string, len(v))
+		for i, str := range v {
+			resolved[i] = p.resolveString(str, context)
+		}
+		return resolved
+	case []interface{}:
+		for i, item := range v {
+			v[i] = p.resolveValue(item, context)
+		}
+		return v
+	case map[string]any:
+		for k, item := range v {
+			v[k] = p.resolveValue(item, context)
+		}
+		return v
+	default:
+		return v
+	}
+}
+
+// resolveString replaces template variables like {{.varName}} with actual values
+func (p *Planner) resolveString(str string, context map[string]string) string {
+	// Simple template resolution: {{.varName}}
+	result := str
+	for key, value := range context {
+		placeholder := fmt.Sprintf("{{.%s}}", key)
+		result = strings.ReplaceAll(result, placeholder, value)
+	}
+	return result
 }
 
 // Helper functions

@@ -42,6 +42,7 @@ func init() {
 	// Add thin-ci as subcommand to main CLI
 	rootCmd.AddCommand(thinCICmd)
 
-	// Add plan command to standalone thin-ci CLI
+	// Add plan and run commands to standalone thin-ci CLI
 	thinCIRootCmd.AddCommand(thinCIPlanCmd)
+	thinCIRootCmd.AddCommand(thinCIRunCmd)
 }

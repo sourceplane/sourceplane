@@ -82,6 +82,17 @@ thinCI:
     - name: validate
       description: Lint Helm chart and validate syntax
       order: 1
+      jobTemplate:
+        commands:
+          - helm lint {{.chartPath}}
+          - helm template {{.releaseName}} {{.chartPath}} --validate
+        metadata:
+          runsOn: ubuntu-latest
+          timeout: 10
+          continueOnError: false
+        artifacts:
+          - name: lint-report
+            path: lint-report.txt
       preSteps:
         - name: setup-helm
           command: helm version
@@ -94,6 +105,26 @@ thinCI:
     - name: plan
       description: Generate Kubernetes manifests with helm template
       order: 2
+      jobTemplate:
+        commands:
+          - helm template {{.releaseName}} {{.chartPath}} --values {{.valuesPath}} --namespace {{.namespace}} --dry-run
+          - helm diff upgrade {{.releaseName}} {{.chartPath}} --values {{.valuesPath}} --namespace {{.namespace}}
+        metadata:
+          runsOn: ubuntu-latest
+          timeout: 15
+          permissions:
+            - contents: read
+            - id-token: write
+        cache:
+          enabled: true
+          key: helm-{{.releaseName}}-{{.checksum}}
+          paths:
+            - ~/.cache/helm
+        artifacts:
+          - name: plan-output
+            path: plan.json
+          - name: manifests
+            path: manifests/
       preSteps:
         - name: setup-kubeconfig
           command: echo "Setting up kubeconfig"
@@ -111,6 +142,29 @@ thinCI:
     - name: apply
       description: Deploy Helm chart to Kubernetes cluster
       order: 3
+      jobTemplate:
+        commands:
+          - helm upgrade --install {{.releaseName}} {{.chartPath}} --values {{.valuesPath}} --namespace {{.namespace}} --wait --atomic --timeout {{.timeout}}
+          - kubectl rollout status deployment/{{.releaseName}} -n {{.namespace}}
+        metadata:
+          runsOn: ubuntu-latest
+          timeout: 30
+          permissions:
+            - contents: read
+            - id-token: write
+          environment:
+            name: "{{.environment}}"
+            url: "https://{{.namespace}}.{{.cluster}}.example.com"
+        requiresApproval: true
+        retryPolicy:
+          maxAttempts: 3
+          backoff: exponential
+        notifications:
+          onSuccess:
+            - slack: "#deployments"
+          onFailure:
+            - slack: "#alerts"
+            - email: "ops@example.com"
       preSteps:
         - name: verify-cluster
           command: kubectl cluster-info
@@ -130,6 +184,19 @@ thinCI:
     - name: destroy
       description: Uninstall Helm release
       order: 4
+      jobTemplate:
+        commands:
+          - helm uninstall {{.releaseName}} --namespace {{.namespace}}
+          - kubectl delete pvc -l app={{.releaseName}} -n {{.namespace}} --ignore-not-found
+        metadata:
+          runsOn: ubuntu-latest
+          timeout: 20
+          permissions:
+            - contents: read
+            - id-token: write
+        requiresApproval: true
+        destructive: true
+        confirmationPrompt: "Are you sure you want to destroy {{.releaseName}}?"
       preSteps: []
       postSteps:
         - name: cleanup-pvcs

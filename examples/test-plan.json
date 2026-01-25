@@ -1,0 +1,58 @@
+{
+  "target": "github",
+  "mode": "plan",
+  "metadata": {
+    "repository": "/Users/example/sourceplane",
+    "baseRef": "main",
+    "headRef": "HEAD",
+    "changedFiles": [
+      "test.yaml"
+    ],
+    "timestamp": "2026-01-26T10:30:00Z"
+  },
+  "jobs": [
+    {
+      "id": "demo-app-validate",
+      "component": "demo-app",
+      "provider": "demo",
+      "action": "validate",
+      "dependsOn": [],
+      "commands": [
+        "echo \"Validating component: {{.component}}\"",
+        "echo \"Provider: {{.provider}} | Action: {{.action}}\"",
+        "echo \"Running in namespace: {{.namespace}}\""
+      ],
+      "preSteps": [
+        {
+          "name": "setup-environment",
+          "command": "echo \"=== Setting up environment ===\""
+        },
+        {
+          "name": "check-dependencies",
+          "command": "echo \"Checking dependencies for {{.component}}\""
+        }
+      ],
+      "postSteps": [
+        {
+          "name": "save-results",
+          "command": "echo \"Saving validation results\""
+        }
+      ],
+      "inputs": {
+        "component": "demo-app",
+        "provider": "demo",
+        "action": "validate",
+        "namespace": "production"
+      },
+      "metadata": {
+        "runsOn": "ubuntu-latest",
+        "timeout": 10,
+        "env": {
+          "SP_COMPONENT": "demo-app",
+          "SP_PROVIDER": "demo",
+          "SP_ACTION": "validate"
+        }
+      }
+    }
+  ]
+}

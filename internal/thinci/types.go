@@ -18,49 +18,83 @@ type PlanMetadata struct {
 	Environment  string   `json:"environment,omitempty"`
 }
 
-// Job represents a single CI job to be executed
-type Job struct {
-	ID        string         `json:"id"`
-	Component string         `json:"component"`
-	Provider  string         `json:"provider"`
-	Action    string         `json:"action"` // plan, apply, destroy, validate
-	Inputs    map[string]any `json:"inputs"`
-	DependsOn []string       `json:"dependsOn"`
-	Metadata  JobMetadata    `json:"metadata"`
-	Condition *JobCondition  `json:"condition,omitempty"`
+// Job represents a single CI job with flexible provider-defined structure
+type Job map[string]any
+
+// JobCore contains the minimal required fields that all jobs must have
+// Providers can extend beyond these core fields
+type JobCore struct {
+	ID        string   `json:"id"`
+	Component string   `json:"component"`
+	Provider  string   `json:"provider"`
+	Action    string   `json:"action"`
+	DependsOn []string `json:"dependsOn"`
 }
 
-// JobMetadata contains platform-specific job configuration
-type JobMetadata struct {
-	RunsOn          string            `json:"runsOn,omitempty"`      // e.g., "ubuntu-latest"
-	Permissions     []string          `json:"permissions,omitempty"` // e.g., ["id-token", "contents"]
-	Environment     map[string]string `json:"env,omitempty"`
-	Timeout         int               `json:"timeout,omitempty"` // in minutes
-	ContinueOnError bool              `json:"continueOnError,omitempty"`
+// Helper methods for Job to access core fields with type safety
+func (j Job) GetID() string {
+	if id, ok := j["id"].(string); ok {
+		return id
+	}
+	return ""
 }
 
-// JobCondition defines when a job should run
-type JobCondition struct {
-	ChangedPaths []string `json:"changedPaths,omitempty"` // Run only if these paths changed
-	Always       bool     `json:"always,omitempty"`       // Always run regardless of changes
+func (j Job) GetComponent() string {
+	if comp, ok := j["component"].(string); ok {
+		return comp
+	}
+	return ""
+}
+
+func (j Job) GetProvider() string {
+	if prov, ok := j["provider"].(string); ok {
+		return prov
+	}
+	return ""
+}
+
+func (j Job) GetAction() string {
+	if action, ok := j["action"].(string); ok {
+		return action
+	}
+	return ""
+}
+
+func (j Job) GetDependsOn() []string {
+	if deps, ok := j["dependsOn"].([]string); ok {
+		return deps
+	}
+	// Handle []interface{} conversion
+	if depsInterface, ok := j["dependsOn"].([]interface{}); ok {
+		deps := make([]string, 0, len(depsInterface))
+		for _, dep := range depsInterface {
+			if depStr, ok := dep.(string); ok {
+				deps = append(deps, depStr)
+			}
+		}
+		return deps
+	}
+	return []string{}
 }
 
 // ProviderAction describes what a provider can do in CI
 type ProviderAction struct {
-	Name        string         `json:"name"` // plan, apply, destroy, validate
-	Description string         `json:"description"`
-	Order       int            `json:"order"` // Execution order relative to other actions
-	PreSteps    []ActionStep   `json:"preSteps,omitempty"`
-	PostSteps   []ActionStep   `json:"postSteps,omitempty"`
-	Inputs      map[string]any `json:"inputs,omitempty"`
-	Outputs     []string       `json:"outputs,omitempty"`
+	Name        string         `json:"name" yaml:"name"` // plan, apply, destroy, validate
+	Description string         `json:"description" yaml:"description"`
+	Order       int            `json:"order" yaml:"order"` // Execution order relative to other actions
+	JobTemplate map[string]any `json:"jobTemplate,omitempty" yaml:"jobTemplate,omitempty"` // Provider-defined job structure template
+	Commands    []string       `json:"commands,omitempty" yaml:"commands,omitempty"`
+	PreSteps    []ActionStep   `json:"preSteps,omitempty" yaml:"preSteps,omitempty"`
+	PostSteps   []ActionStep   `json:"postSteps,omitempty" yaml:"postSteps,omitempty"`
+	Inputs      map[string]any `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Outputs     []string       `json:"outputs,omitempty" yaml:"outputs,omitempty"`
 }
 
 // ActionStep represents a single step within an action
 type ActionStep struct {
-	Name    string         `json:"name"`
-	Command string         `json:"command"`
-	Inputs  map[string]any `json:"inputs,omitempty"`
+	Name    string         `json:"name" yaml:"name"`
+	Command string         `json:"command" yaml:"command"`
+	Inputs  map[string]any `json:"inputs,omitempty" yaml:"inputs,omitempty"`
 }
 
 // ComponentChange tracks which component is affected by file changes

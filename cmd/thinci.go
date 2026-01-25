@@ -24,6 +24,13 @@ var (
 	thinCIEnvironment string
 	thinCIOutput      string
 	intentPath        string
+	
+	// Run command flags
+	runPlanFile   string
+	runJobID      string
+	runVerbose    bool
+	runDryRun     bool
+	runGitHub     bool
 )
 
 var thinCICmd = &cobra.Command{
@@ -42,6 +49,15 @@ The plan includes affected components, required provider actions, dependencies, 
 	RunE: runThinCIPlan,
 }
 
+var thinCIRunCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Execute a job from a plan locally",
+	Long: `Execute a specific job from a generated plan file.
+Runs pre-steps, main commands, and post-steps with verbose output.
+Useful for testing CI jobs locally before pushing to CI/CD platform.`,
+	RunE: runThinCIRun,
+}
+
 func init() {
 	// Flags for plan command
 	thinCIPlanCmd.Flags().StringVar(&thinCITarget, "github", "", "Generate plan for GitHub Actions (use --github)")
@@ -57,8 +73,19 @@ func init() {
 	// Mark target as required (at least one)
 	thinCIPlanCmd.MarkFlagsOneRequired("github", "gitlab")
 
+	// Flags for run command
+	thinCIRunCmd.Flags().StringVarP(&runPlanFile, "plan", "p", "plan.json", "Path to plan file")
+	thinCIRunCmd.Flags().StringVar(&runJobID, "job-id", "", "Job ID to execute (required)")
+	thinCIRunCmd.Flags().BoolVarP(&runVerbose, "verbose", "v", true, "Verbose output")
+	thinCIRunCmd.Flags().BoolVar(&runDryRun, "dry-run", false, "Dry run mode (don't execute commands)")
+	thinCIRunCmd.Flags().BoolVar(&runGitHub, "github", false, "Running in GitHub Actions context")
+	
+	// Mark required flags
+	thinCIRunCmd.MarkFlagRequired("job-id")
+
 	// Add plan command to thin-ci command (for use as subcommand of sp)
 	thinCICmd.AddCommand(thinCIPlanCmd)
+	thinCICmd.AddCommand(thinCIRunCmd)
 }
 
 func runThinCIPlan(cmd *cobra.Command, args []string) error {
@@ -198,26 +225,53 @@ func getChangedFiles(repoPath, baseRef, headRef string) ([]string, error) {
 func loadProviderRegistry(repoPath string) (*thinci.ProviderRegistry, error) {
 	registry := thinci.NewProviderRegistry()
 
-	// Find intent.yaml in repo
-	intentPath := filepath.Join(repoPath, "intent.yaml")
-	if _, err := os.Stat(intentPath); os.IsNotExist(err) {
-		// Try legacy approach - load from providers directory
-		return loadProvidersLegacy(repoPath)
-	}
-
-	// Load providers from intent.yaml using new loader
-	providers, err := provider.LoadProvidersFromIntent(intentPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load providers from intent: %w", err)
-	}
-
-	// Convert to thin-ci provider metadata and register
-	for providerName, prov := range providers {
-		metadata, err := convertToProviderMetadata(providerName, prov)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert provider %s: %w", providerName, err)
+	// For thin-ci, always load providers from providers directory
+	// because we need the full thinCI configuration from provider.yaml
+	providersDir := filepath.Join(repoPath, "providers")
+	
+	// Check if we're in a subdirectory - walk up to find providers dir
+	searchPath := repoPath
+	for i := 0; i < 5; i++ { // Max 5 levels up
+		testPath := filepath.Join(searchPath, "providers")
+		if _, err := os.Stat(testPath); err == nil {
+			providersDir = testPath
+			break
 		}
-		registry.RegisterProvider(metadata)
+		searchPath = filepath.Dir(searchPath)
+	}
+
+	if _, err := os.Stat(providersDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("providers directory not found (searched from %s)", repoPath)
+	}
+
+	// Read all provider directories
+	entries, err := os.ReadDir(providersDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read providers directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		providerName := entry.Name()
+		providerPath := filepath.Join(providersDir, providerName, "provider.yaml")
+
+		// Check if provider.yaml exists
+		if _, err := os.Stat(providerPath); os.IsNotExist(err) {
+			continue
+		}
+
+		fmt.Printf("Loading provider: %s\n", providerName)
+
+		// Load provider metadata directly from provider.yaml
+		providerMeta, err := loadProviderMetadata(providerPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load provider %s: %w", providerName, err)
+		}
+
+		registry.RegisterProvider(providerMeta)
 	}
 
 	return registry, nil
@@ -345,14 +399,19 @@ func loadProviderMetadata(path string) (*thinci.ProviderMetadata, error) {
 		// Parse actions
 		if actionsRaw, ok := thinCIRaw["actions"].([]interface{}); ok {
 			for _, actionRaw := range actionsRaw {
-				if actionMap, ok := actionRaw.(map[string]interface{}); ok {
-					action := thinci.ProviderAction{
-						Name:        getString(actionMap, "name"),
-						Description: getString(actionMap, "description"),
-						Order:       getInt(actionMap, "order"),
-					}
-					thinCIConfig.Actions = append(thinCIConfig.Actions, action)
+				// Marshal back to YAML and unmarshal into ProviderAction struct
+				// This properly handles all fields including jobTemplate
+				actionData, err := yaml.Marshal(actionRaw)
+				if err != nil {
+					continue
 				}
+
+				var action thinci.ProviderAction
+				if err := yaml.Unmarshal(actionData, &action); err != nil {
+					continue
+				}
+
+				thinCIConfig.Actions = append(thinCIConfig.Actions, action)
 			}
 		}
 
@@ -418,4 +477,49 @@ func getInt(m map[string]interface{}, key string) int {
 		return int(v)
 	}
 	return 0
+}
+
+// runThinCIRun executes a specific job from a plan file
+func runThinCIRun(cmd *cobra.Command, args []string) error {
+	// Load the plan file
+	planData, err := os.ReadFile(runPlanFile)
+	if err != nil {
+		return fmt.Errorf("failed to read plan file: %w", err)
+	}
+	
+	// Parse the plan
+	var plan thinci.Plan
+	if err := json.Unmarshal(planData, &plan); err != nil {
+		return fmt.Errorf("failed to parse plan file: %w", err)
+	}
+	
+	// Find the job with the specified ID
+	var targetJob *thinci.Job
+	for i := range plan.Jobs {
+		if plan.Jobs[i].GetID() == runJobID {
+			targetJob = &plan.Jobs[i]
+			break
+		}
+	}
+	
+	if targetJob == nil {
+		return fmt.Errorf("job '%s' not found in plan", runJobID)
+	}
+	
+	// Create executor
+	executor := thinci.NewExecutor(runVerbose, runDryRun)
+	
+	// Execute the job
+	fmt.Printf("Sourceplane Thin-CI Job Executor\n")
+	fmt.Printf("Plan: %s\n", runPlanFile)
+	
+	if runDryRun {
+		fmt.Println("\n⚠️  DRY RUN MODE - Commands will not be executed")
+	}
+	
+	if err := executor.ExecuteJob(*targetJob); err != nil {
+		return fmt.Errorf("job execution failed: %w", err)
+	}
+	
+	return nil
 }

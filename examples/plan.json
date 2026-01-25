@@ -1,0 +1,114 @@
+{
+  "target": "github",
+  "mode": "plan",
+  "metadata": {
+    "repository": "/Users/example/sourceplane",
+    "baseRef": "main",
+    "headRef": "HEAD",
+    "changedFiles": [
+      "examples/minimal/intent.yaml",
+      "providers/helm/values.yaml"
+    ],
+    "timestamp": "2026-01-26T10:30:00Z",
+    "environment": "staging"
+  },
+  "jobs": [
+    {
+      "id": "hello-app-validate",
+      "component": "hello-app",
+      "provider": "helm",
+      "action": "validate",
+      "dependsOn": [],
+      "commands": [
+        "helm lint .",
+        "helm template hello-app . --validate"
+      ],
+      "preSteps": [
+        {
+          "name": "setup-helm",
+          "command": "helm version"
+        }
+      ],
+      "postSteps": [],
+      "inputs": {
+        "chartPath": ".",
+        "component": "hello-app",
+        "timeout": "600",
+        "kubeconfig": "$KUBECONFIG",
+        "helmVersion": "3.12.0"
+      },
+      "outputs": [
+        "lintReport"
+      ],
+      "metadata": {
+        "runsOn": "ubuntu-latest",
+        "timeout": 10,
+        "continueOnError": false,
+        "env": {
+          "SP_COMPONENT": "hello-app",
+          "SP_PROVIDER": "helm",
+          "SP_ACTION": "validate"
+        }
+      }
+    },
+    {
+      "id": "hello-app-plan",
+      "component": "hello-app",
+      "provider": "helm",
+      "action": "plan",
+      "dependsOn": [
+        "hello-app-validate"
+      ],
+      "commands": [
+        "helm template {{.releaseName}} {{.chartPath}} --values {{.valuesPath}} --namespace {{.namespace}} --dry-run",
+        "helm diff upgrade {{.releaseName}} {{.chartPath}} --values {{.valuesPath}} --namespace {{.namespace}}"
+      ],
+      "preSteps": [
+        {
+          "name": "setup-kubeconfig",
+          "command": "echo \"Setting up kubeconfig\""
+        }
+      ],
+      "postSteps": [
+        {
+          "name": "save-plan",
+          "command": "echo \"Saving plan output\""
+        }
+      ],
+      "inputs": {
+        "chartPath": ".",
+        "valuesPath": "values.yaml",
+        "namespace": "default",
+        "releaseName": "hello-app",
+        "component": "hello-app",
+        "timeout": "600",
+        "kubeconfig": "$KUBECONFIG",
+        "helmVersion": "3.12.0"
+      },
+      "outputs": [
+        "manifests",
+        "plan.json"
+      ],
+      "metadata": {
+        "runsOn": "ubuntu-latest",
+        "timeout": 15,
+        "permissions": [
+          "contents: read",
+          "id-token: write"
+        ],
+        "cache": {
+          "enabled": true,
+          "key": "helm-hello-app-abc123",
+          "paths": [
+            "~/.cache/helm"
+          ]
+        },
+        "env": {
+          "SP_COMPONENT": "hello-app",
+          "SP_PROVIDER": "helm",
+          "SP_ACTION": "plan"
+        }
+      }
+    }
+  ]
+}
