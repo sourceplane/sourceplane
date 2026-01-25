@@ -132,8 +132,8 @@ func runThinCIPlan(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get changed files: %w", err)
 	}
 
-	// Load provider registry
-	registry, err := loadProviderRegistry(cwd)
+	// Load provider registry (from intent file and local/remote sources)
+	registry, err := loadProviderRegistry(cwd, intents)
 	if err != nil {
 		return fmt.Errorf("failed to load providers: %w", err)
 	}
@@ -222,7 +222,87 @@ func getChangedFiles(repoPath, baseRef, headRef string) ([]string, error) {
 }
 
 // loadProviderRegistry loads all providers and creates a registry
-func loadProviderRegistry(repoPath string) (*thinci.ProviderRegistry, error) {
+// loadProviderRegistry loads all providers from intent files and local/remote sources
+func loadProviderRegistry(repoPath string, intents []*models.Repository) (*thinci.ProviderRegistry, error) {
+	registry := thinci.NewProviderRegistry()
+	fetcher, err := thinci.NewProviderFetcher()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create provider fetcher: %w", err)
+	}
+
+	// Collect all providers from all intent files
+	providerSources := make(map[string]models.Provider)
+	for _, intent := range intents {
+		for name, provider := range intent.Providers {
+			if _, exists := providerSources[name]; !exists {
+				providerSources[name] = provider
+			}
+		}
+	}
+
+	// Load each provider
+	for name, providerConfig := range providerSources {
+		var providerPath string
+		
+		// Check if source is remote or local
+		if providerConfig.Source != "" && thinci.IsRemoteSource(providerConfig.Source) {
+			// Fetch remote provider
+			path, err := fetcher.FetchProvider(providerConfig.Source, providerConfig.Version)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch provider %s: %w", name, err)
+			}
+			providerPath = filepath.Join(path, "provider.yaml")
+		} else {
+			// Try local providers directory first
+			providerPath = filepath.Join(repoPath, "providers", name, "provider.yaml")
+			
+			// If not found locally, search up the directory tree
+			if _, err := os.Stat(providerPath); os.IsNotExist(err) {
+				searchPath := repoPath
+				found := false
+				for i := 0; i < 5; i++ {
+					testPath := filepath.Join(searchPath, "providers", name, "provider.yaml")
+					if _, err := os.Stat(testPath); err == nil {
+						providerPath = testPath
+						found = true
+						break
+					}
+					searchPath = filepath.Dir(searchPath)
+				}
+				
+				if !found {
+					return nil, fmt.Errorf("provider '%s' not found locally and no remote source specified", name)
+				}
+			}
+		}
+
+		// Verify provider.yaml exists
+		if _, err := os.Stat(providerPath); os.IsNotExist(err) {
+			return nil, fmt.Errorf("provider.yaml not found for provider %s at %s", name, providerPath)
+		}
+
+		fmt.Printf("Loading provider: %s from %s\n", name, providerPath)
+
+		// Load provider metadata
+		providerMeta, err := loadProviderMetadata(providerPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load provider %s: %w", name, err)
+		}
+
+		registry.RegisterProvider(providerMeta)
+	}
+
+	// If no providers were loaded from intents, fall back to loading from local providers directory
+	if len(providerSources) == 0 {
+		fmt.Println("No providers defined in intent files, searching local providers directory...")
+		return loadLocalProviders(repoPath)
+	}
+
+	return registry, nil
+}
+
+// loadLocalProviders loads providers from local providers directory (fallback/legacy)
+func loadLocalProviders(repoPath string) (*thinci.ProviderRegistry, error) {
 	registry := thinci.NewProviderRegistry()
 
 	// For thin-ci, always load providers from providers directory
@@ -266,47 +346,6 @@ func loadProviderRegistry(repoPath string) (*thinci.ProviderRegistry, error) {
 		fmt.Printf("Loading provider: %s\n", providerName)
 
 		// Load provider metadata directly from provider.yaml
-		providerMeta, err := loadProviderMetadata(providerPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load provider %s: %w", providerName, err)
-		}
-
-		registry.RegisterProvider(providerMeta)
-	}
-
-	return registry, nil
-}
-
-// loadProvidersLegacy loads providers from local providers directory (backward compatibility)
-func loadProvidersLegacy(repoPath string) (*thinci.ProviderRegistry, error) {
-	registry := thinci.NewProviderRegistry()
-
-	// Find providers directory
-	providersDir := filepath.Join(repoPath, "providers")
-	if _, err := os.Stat(providersDir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("providers directory not found at %s", providersDir)
-	}
-
-	// Read all provider directories
-	entries, err := os.ReadDir(providersDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read providers directory: %w", err)
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		providerName := entry.Name()
-		providerPath := filepath.Join(providersDir, providerName, "provider.yaml")
-
-		// Check if provider.yaml exists
-		if _, err := os.Stat(providerPath); os.IsNotExist(err) {
-			continue
-		}
-
-		// Load provider
 		providerMeta, err := loadProviderMetadata(providerPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load provider %s: %w", providerName, err)
